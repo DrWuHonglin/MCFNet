@@ -5,18 +5,8 @@ import torch.nn.functional as F
 import torchvision
 from FFM import FeatureFusionModule
 from attention import Cross_Atten_Lite_split
-from collections import OrderedDict
 
 
-class StdConv2d(nn.Conv2d):
-    def forward(self, x):
-        w = self.weight
-        v, m = torch.var_mean(w, dim=[1, 2, 3], keepdim=True, unbiased=False)
-        w = (w - m) / torch.sqrt(v + 1e-5)
-        return F.conv2d(x, w, self.bias, self.stride, self.padding,
-                        self.dilation, self.groups)
-    
-    
 class MLP(nn.Module):
     """
     Linear Embedding:
@@ -132,33 +122,48 @@ class Encoder(nn.Module):
         self.ffm2 = FeatureFusionModule(in_channels=128, out_channels=128)
         self.ffm3 = FeatureFusionModule(in_channels=256, out_channels=256)
         self.ffm4 = FeatureFusionModule(in_channels=512, out_channels=512)
-        self.att = Cross_Atten_Lite_split(inc1=512, inc2=512)
+        self.MCFCM = Cross_Atten_Lite_split(inc1=512, inc2=512)
 
     def forward(self, rgb, dsm):
+        SE, MC = True, True
+
         # Process RGB and DSM images separately up to layer1
         rgb_b1, rgb_b2, rgb_b3, rgb_b4 = self.rgb_backbone(rgb)
         dsm_b1, dsm_b2, dsm_b3, dsm_b4 = self.dsm_backbone(dsm)
 
         # Feature fusion after layer1
-        fused_b1 = self.ffm1(rgb_b1, dsm_b1)
+        if SE:
+            fused_b1 = self.ffm1(rgb_b1, dsm_b1)
+        else:
+            fused_b1 = rgb_b1 + dsm_b1
         fused_b2_rgb = self.rgb_backbone.layer2(fused_b1)
         fused_b2_dsm = self.dsm_backbone.layer2(dsm_b1)
 
         # Feature fusion after layer2
-        fused_b2 = self.ffm2(fused_b2_rgb, fused_b2_dsm)
+        if SE:
+            fused_b2 = self.ffm2(fused_b2_rgb, fused_b2_dsm)
+        else:
+            fused_b2 = fused_b2_rgb + fused_b2_dsm
         fused_b3_rgb = self.rgb_backbone.layer3(fused_b2)
         fused_b3_dsm = self.dsm_backbone.layer3(fused_b2_dsm)
 
         # Feature fusion after layer3
-        fused_b3 = self.ffm3(fused_b3_rgb, fused_b3_dsm)
+        if SE:
+            fused_b3 = self.ffm3(fused_b3_rgb, fused_b3_dsm)
+        else:
+            fused_b3 = fused_b3_rgb + fused_b3_dsm
         fused_b4_rgb = self.rgb_backbone.layer4(fused_b3)
         fused_b4_dsm = self.dsm_backbone.layer4(fused_b3_dsm)
 
         # Feature fusion after layer4
-        fused_b4 = self.ffm4(fused_b4_rgb, fused_b4_dsm)
+        if SE:
+            fused_b4 = self.ffm4(fused_b4_rgb, fused_b4_dsm)
+        else:
+            fused_b4 = fused_b4_rgb + fused_b4_dsm
 
-        # attention
-        fused_b4 = self.att(fused_b4, fused_b4_rgb, fused_b4_dsm)
+        # Multiscale Cross-Modal Feature Correlation Module
+        if MC:
+            fused_b4 = self.MCFCM(fused_b4, fused_b4_rgb, fused_b4_dsm)
 
         return [fused_b1, fused_b2, fused_b3, fused_b4]
 
@@ -183,6 +188,7 @@ class MCFNet(nn.Module):
 
 if __name__ == '__main__':
     from thop import profile, clever_format
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rgb = torch.randn(1, 3, 512, 512)
     dsm = torch.randn(1, 512, 512)
