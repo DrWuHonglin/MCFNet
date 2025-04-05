@@ -131,6 +131,7 @@ class MCFNet(nn.Module):
         resnet34 = ResNet34()
         self.dsm_init = nn.Conv2d(1, 3, 1)
 
+        # Replace 7 * 7 convolution with three 3 * 3 convolutions
         conv1 = nn.Sequential(
             Conv2dBnRelu(3, 64, kernel_size=3, stride=2, padding=1),
             Conv2dBnRelu(64, 64, kernel_size=3, stride=1, padding=1),
