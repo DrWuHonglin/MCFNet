@@ -107,9 +107,13 @@ class Cross_Atten_Lite_split(nn.Module):
         self.mem_kq = MEM(inc1 // 4, inc1 // 4)
         self.mem_v = MEM(inc1 // 4, inc1 // 4)
 
+        self.w = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)
+        self.w.data.fill_(0)
+
         self._init_weight()
 
     def forward(self, x, x1, x2):
+        MC = False
         batch_size = x.size(0)
         h = x.size(2)
         w = x.size(3)
@@ -122,28 +126,30 @@ class Cross_Atten_Lite_split(nn.Module):
         kq = channel_shuffle(torch.cat([kq1, kq2], dim=2), 2)
         k1, q1, k2, q2 = torch.split(kq, self.midc2, dim=2)
 
-        # Reshape K and Q to (batch_size, c // 4, h, w)
-        k1 = k1.permute(0, 2, 1).view(batch_size, -1, h, w)
-        k2 = k2.permute(0, 2, 1).view(batch_size, -1, h, w)
-        q1 = q1.permute(0, 2, 1).view(batch_size, -1, h, w)
-        q2 = q2.permute(0, 2, 1).view(batch_size, -1, h, w)
+        if MC:
+            # Reshape K and Q to (batch_size, c // 4, h, w)
+            k1 = k1.permute(0, 2, 1).view(batch_size, -1, h, w)
+            k2 = k2.permute(0, 2, 1).view(batch_size, -1, h, w)
+            q1 = q1.permute(0, 2, 1).view(batch_size, -1, h, w)
+            q2 = q2.permute(0, 2, 1).view(batch_size, -1, h, w)
 
-        # Apply multi-scale module to K and Q
-        k1 = self.mem_kq(k1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
-        k2 = self.mem_kq(k2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
-        q1 = self.mem_kq(q1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
-        q2 = self.mem_kq(q2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            # Apply multi-scale module to K and Q
+            k1 = self.mem_kq(k1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            k2 = self.mem_kq(k2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            q1 = self.mem_kq(q1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            q2 = self.mem_kq(q2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
 
         v = self.v_conv(x.permute(0, 2, 3, 1).view(batch_size, h * w, -1))
         v1, v2 = torch.split(v, self.midc1, dim=2)
 
-        # Reshape V to (batch_size, c // 4, h, w)
-        v1 = v1.permute(0, 2, 1).view(batch_size, -1, h, w)
-        v2 = v2.permute(0, 2, 1).view(batch_size, -1, h, w)
+        if MC:
+            # Reshape V to (batch_size, c // 4, h, w)
+            v1 = v1.permute(0, 2, 1).view(batch_size, -1, h, w)
+            v2 = v2.permute(0, 2, 1).view(batch_size, -1, h, w)
 
-        # Apply multi-scale module to V
-        v1 = self.mem_v(v1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
-        v2 = self.mem_v(v2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            # Apply multi-scale module to V
+            v1 = self.mem_v(v1).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
+            v2 = self.mem_v(v2).permute(0, 2, 3, 1).view(batch_size, h * w, -1)
 
         mat = torch.matmul(q1, k1.permute(0, 2, 1))
         mat = mat / torch.sqrt(self.midc2)
@@ -162,7 +168,7 @@ class Cross_Atten_Lite_split(nn.Module):
         v = v.permute(0, 3, 1, 2)
         v = self.bn_last(v)
 
-        v = v + x
+        v = self.w * v + x
 
         return v
 
