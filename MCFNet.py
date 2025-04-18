@@ -192,13 +192,6 @@ if __name__ == '__main__':
     rgb = torch.randn(1, 3, 512, 512)
     dsm = torch.randn(1, 512, 512)
     net = MCFNet()
-    params_dict = dict(net.named_parameters())
-    for key in params_dict.keys():
-        print(key)
-    flops, params = profile(net, inputs=(rgb, dsm))
-    flops, params = clever_format([flops, params], "%.2f")
-    print(f"Params: {params}")
-    print(f"FLOPS: {flops}")
     out = net(rgb, dsm)
     print(out.shape)
 
