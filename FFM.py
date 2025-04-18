@@ -49,6 +49,6 @@ if __name__ == "__main__":
     x1 = torch.randn(1, in_channels, 32, 32)
     x2 = torch.randn(1, in_channels, 32, 32)
     ffm = FeatureFusionModule(in_channels=in_channels, out_channels=out_channels)
-    out = ffm(x_rgb, x_dsm)
+    out = ffm(x1, x2)
     print(out.shape)
     
