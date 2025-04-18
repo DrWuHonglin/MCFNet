@@ -231,12 +231,5 @@ if __name__ == '__main__':
     x = torch.randn(1, 3, 512, 512)
     y = torch.randn(1, 512, 512)
     net = MCFNet()
-    params_dict = dict(net.named_parameters())
-    for key in params_dict.keys():
-        print(key)
-    flops, params = profile(net, inputs=(x, y))
-    flops, params = clever_format([flops, params], "%.2f")
-    print(f"Params: {params}")
-    print(f"FLOPS: {flops}")
     out = net(x, y)
     print(out.shape)
