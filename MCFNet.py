@@ -188,7 +188,6 @@ class MCFNet(nn.Module):
 
 if __name__ == '__main__':
     from thop import profile, clever_format
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rgb = torch.randn(1, 3, 512, 512)
     dsm = torch.randn(1, 512, 512)
