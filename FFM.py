@@ -46,15 +46,9 @@ class FeatureFusionModule(nn.Module):
 if __name__ == "__main__":
     from thop import profile, clever_format
     in_channels, out_channels = 256, 256
-    x_rgb = torch.randn(1, in_channels, 32, 32)
-    x_dsm = torch.randn(1, in_channels, 32, 32)
+    x1 = torch.randn(1, in_channels, 32, 32)
+    x2 = torch.randn(1, in_channels, 32, 32)
     ffm = FeatureFusionModule(in_channels=in_channels, out_channels=out_channels)
-    params_dict = dict(ffm.named_parameters())
-    for key in params_dict.keys():
-        print(key)
     out = ffm(x_rgb, x_dsm)
     print(out.shape)
-    flops, params = profile(ffm, inputs=(x_rgb,x_dsm))
-    flops, params = clever_format([flops, params], "%.2f")
-    print(f"Params: {params}")
-    print(f"FLOPS: {flops}")
+    
