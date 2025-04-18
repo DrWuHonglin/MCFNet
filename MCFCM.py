@@ -180,12 +180,8 @@ class Cross_Atten_Lite_split(nn.Module):
 
 if __name__ == "__main__":
     in_channels, out_channels = 512, 512
-    x_rgb = torch.randn(1, in_channels, 16, 16)
-    x_dsm = torch.randn(1, in_channels, 16, 16)
+    x1 = torch.randn(1, in_channels, 16, 16)
+    x2 = torch.randn(1, in_channels, 16, 16)
     ffm = Cross_Atten_Lite_split(512, 512)
-    out1 = ffm(x_rgb + x_dsm, x_rgb, x_dsm)
-    print(out1.shape)
-    flops, params = profile(ffm, inputs=(x_rgb + x_dsm, x_rgb, x_dsm))
-    flops, params = clever_format([flops, params], "%.2f")
-    print(f"Params: {params}")
-    print(f"FLOPS: {flops}")
+    out = ffm(x1 + x2, x1, x2)
+    print(out.shape)
