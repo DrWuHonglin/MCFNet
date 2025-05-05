@@ -39,10 +39,10 @@ class MEM(nn.Module):
     def __init__(self, in_ch, out_ch):
         super(MEM, self).__init__()
 
-        self.branch1 = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            Conv2dBnRelu(in_ch, out_ch, kernel_size=1, stride=1, padding=0)
-        )
+        # self.branch1 = nn.Sequential(
+        #     nn.AdaptiveAvgPool2d(1),
+        #     Conv2dBnRelu(in_ch, out_ch, kernel_size=1, stride=1, padding=0)
+        # )
 
         self.mid = nn.Sequential(
             Conv2dBnRelu(in_ch, out_ch, kernel_size=1, stride=1, padding=0)
@@ -63,7 +63,7 @@ class MEM(nn.Module):
     def forward(self, x):
         h, w = x.size(2), x.size(3)
         b1 = x
-        b1 = F.interpolate(b1, size=(h, w), mode='bilinear', align_corners=True)
+        # b1 = F.interpolate(b1, size=(h, w), mode='bilinear', align_corners=True)
 
         mid = self.mid(x)
 
